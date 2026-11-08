@@ -90,9 +90,22 @@ void main() {
     expect(find.widgetWithText(FilledButton, 'Generar EPUB'), findsOneWidget);
   });
 
+  testWidgets('SectionsPanel muestra divisiones con conteos y badge Omitida al desmarcar índice', (tester) async {
+    await pumpView(tester);
+    expect(find.textContaining('Estructura del libro'), findsOneWidget);
+    expect(find.textContaining('CUERPO DE LA OBRA'), findsOneWidget);
+
+    final firstSection = cubit.state.project.sections.first;
+    cubit.updateSection(firstSection.key, (s) => s.copyWith(inToc: false));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Omitida del índice'), findsWidgets);
+  });
+
   testWidgets('secciones: lista inicial, añadir y editar la seleccionada', (tester) async {
     await pumpView(tester);
-    expect(find.text('Secciones (${SectionKind.values.length})'), findsOneWidget);
+    expect(find.text('Estructura del libro'), findsOneWidget);
+    expect(find.text('8 de 8 secciones en el índice'), findsOneWidget);
     expect(find.text('cubierta.xhtml · Cubierta'), findsOneWidget);
     expect(find.text('El título es obligatorio.'), findsNothing);
 
@@ -100,13 +113,13 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Interludio').last);
     await tester.pumpAndSettle();
-    expect(find.text('Secciones (${SectionKind.values.length + 1})'), findsOneWidget);
+    expect(find.text('9 de 9 secciones en el índice'), findsOneWidget);
     expect(cubit.state.selected?.kind, SectionKind.interlude);
 
     await tester.enterText(find.widgetWithText(TextFormField, 'Subtítulo'), 'Entre capítulos');
     await tester.pump();
     expect(cubit.state.selected?.subtitle, 'Entre capítulos');
-    expect(find.text('Interludio 2: Entre capítulos'), findsWidgets);
+    expect(find.text('Interludio 1: Entre capítulos'), findsWidgets);
   });
 
   testWidgets('metadatos y perfiles: guardar, modificar y volver a cargar', (tester) async {

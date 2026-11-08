@@ -11,16 +11,29 @@ typedef _Row = ({BookMatter? header, TemplateSection? section});
 
 // Índice de secciones en el orden del spine, agrupado por división. Soltar una
 // sección bajo otro separador la cambia de división.
-class const SectionsPanel({super.key}) extends StatelessWidget {
+class SectionsPanel extends StatefulWidget {
+  const SectionsPanel({super.key});
+
+  @override
+  State<SectionsPanel> createState() => _SectionsPanelState();
+}
+
+class _SectionsPanelState extends State<SectionsPanel> {
+  final Set<BookMatter> _collapsed = {};
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final cubit = context.read<EpubTemplaterCubit>();
     final sections = context.select((EpubTemplaterCubit c) => c.state.project.sections);
     final selectedKey = context.select((EpubTemplaterCubit c) => c.state.selectedKey);
+    final inTocCount = sections.where((s) => s.inToc).length;
+
     final rows = <_Row>[
       for (final matter in BookMatter.values) ...[
         (header: matter, section: null),
-        for (final s in sections.where((s) => s.matter == matter)) (header: null, section: s),
+        if (!_collapsed.contains(matter))
+          for (final s in sections.where((s) => s.matter == matter)) (header: null, section: s),
       ],
     ];
 
@@ -48,11 +61,30 @@ class const SectionsPanel({super.key}) extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(AppPadding.large, AppPadding.medium, AppPadding.medium, AppPadding.medium),
-          child: Row(
+          padding: const EdgeInsets.fromLTRB(AppPadding.large, AppPadding.medium, AppPadding.medium, AppPadding.small),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: Text('Secciones (${sections.length})', style: Theme.of(context).textTheme.titleSmall)),
-              AddSectionButton(onSelected: cubit.addSection),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Estructura del libro', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 2),
+                        Text('$inTocCount de ${sections.length} secciones en el índice', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
+                      ],
+                    ),
+                  ),
+                  AddSectionButton(onSelected: cubit.addSection),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.small),
+              Text(
+                'Marca para incluir en el índice. Arrastra :: para reordenar.',
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant, fontSize: 11),
+              ),
             ],
           ),
         ),
@@ -72,7 +104,23 @@ class const SectionsPanel({super.key}) extends StatelessWidget {
             itemCount: rows.length,
             onReorderItem: onReorder,
             itemBuilder: (context, i) => switch (rows[i]) {
-              (header: final matter?, section: _) => _MatterHeader(key: ValueKey(matter), matter: matter, first: i == 0),
+              (header: final matter?, section: _) => _MatterHeader(
+                key: ValueKey(matter),
+                matter: matter,
+                first: i == 0,
+                isCollapsed: _collapsed.contains(matter),
+                inTocCount: sections.where((s) => s.matter == matter && s.inToc).length,
+                totalCount: sections.where((s) => s.matter == matter).length,
+                onToggleCollapse: () {
+                  setState(() {
+                    if (_collapsed.contains(matter)) {
+                      _collapsed.remove(matter);
+                    } else {
+                      _collapsed.add(matter);
+                    }
+                  });
+                },
+              ),
               (header: _, section: final s?) => _SectionTile(
                 key: ValueKey(s.key),
                 section: s,
@@ -90,29 +138,59 @@ class const SectionsPanel({super.key}) extends StatelessWidget {
   }
 }
 
-class const _MatterHeader({super.key, required final BookMatter matter, required final bool first}) extends StatelessWidget {
+class _MatterHeader extends StatelessWidget {
+  const _MatterHeader({
+    super.key,
+    required this.matter,
+    required this.first,
+    required this.isCollapsed,
+    required this.inTocCount,
+    required this.totalCount,
+    required this.onToggleCollapse,
+  });
+
+  final BookMatter matter;
+  final bool first;
+  final bool isCollapsed;
+  final int inTocCount;
+  final int totalCount;
+  final VoidCallback onToggleCollapse;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: EdgeInsets.fromLTRB(AppPadding.large, first ? AppPadding.medium : AppPadding.large, AppPadding.large, AppPadding.small),
-      child: Row(
-        spacing: AppSpacing.medium,
-        children: [
-          Text(matter.label, style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.primary)),
-          Expanded(child: Divider(color: theme.colorScheme.outlineVariant)),
-        ],
+    return InkWell(
+      onTap: onToggleCollapse,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(AppPadding.large, first ? AppPadding.medium : AppPadding.large, AppPadding.large, AppPadding.small),
+        child: Row(
+          children: [
+            Icon(isCollapsed ? Icons.chevron_right : Icons.expand_more, size: 16, color: theme.colorScheme.primary),
+            const SizedBox(width: AppSpacing.small),
+            Expanded(
+              child: Text(
+                '${matter.label.toUpperCase()} · $inTocCount DE $totalCount',
+                style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class const AddSectionButton({super.key, required final ValueChanged<SectionKind> onSelected}) extends StatelessWidget {
+class AddSectionButton extends StatelessWidget {
+  const AddSectionButton({super.key, required this.onSelected});
+
+  final ValueChanged<SectionKind> onSelected;
+
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<SectionKind>(
       tooltip: 'Añadir sección',
-      icon: const Icon(Icons.add),
       onSelected: onSelected,
       itemBuilder: (context) => [
         for (final matter in BookMatter.values) ...[
@@ -124,35 +202,99 @@ class const AddSectionButton({super.key, required final ValueChanged<SectionKind
             ),
         ],
       ],
+      child: FilledButton.tonalIcon(
+        onPressed: null, // PopupMenuButton handles tap
+        icon: const Icon(Icons.add, size: 16),
+        label: const Text('Añadir'),
+      ),
     );
   }
 }
 
-class const _SectionTile({super.key, required final TemplateSection section, required final int index, required final bool selected, required final VoidCallback onTap, required final VoidCallback onToggleToc}) extends StatelessWidget {
+class _SectionTile extends StatelessWidget {
+  const _SectionTile({
+    super.key,
+    required this.section,
+    required this.index,
+    required this.selected,
+    required this.onTap,
+    required this.onToggleToc,
+  });
+
+  final TemplateSection section;
+  final int index;
+  final bool selected;
+  final VoidCallback onTap;
+  final VoidCallback onToggleToc;
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final s = section;
+    final isDimmed = !s.inToc;
+
     return ListTile(
       dense: true,
       visualDensity: const VisualDensity(vertical: -4),
       minVerticalPadding: AppPadding.small,
       selected: selected,
       onTap: onTap,
-      contentPadding: EdgeInsets.only(left: AppPadding.large * s.level.clamp(1, 6), right: AppPadding.small),
-      leading: const Icon(Icons.article_outlined, size: 20),
-      title: Text(s.effectiveTocLabel.isEmpty ? s.kind.label : s.effectiveTocLabel, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text('${s.href} · ${s.kind.label}', maxLines: 1, overflow: TextOverflow.ellipsis),
+      contentPadding: EdgeInsets.only(left: AppPadding.medium * s.level.clamp(1, 4), right: AppPadding.small),
+      leading: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ReorderableDragStartListener(
+            index: index,
+            child: Tooltip(
+              message: 'Arrastra para reordenar',
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                child: Icon(Icons.drag_indicator, size: 18, color: theme.colorScheme.outline),
+              ),
+            ),
+          ),
+          Icon(
+            Icons.article_outlined,
+            size: 18,
+            color: isDimmed ? theme.disabledColor : theme.colorScheme.onSurfaceVariant,
+          ),
+        ],
+      ),
+      title: Text(
+        s.effectiveTocLabel.isEmpty ? s.kind.label : s.effectiveTocLabel,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: isDimmed ? TextStyle(color: theme.disabledColor) : null,
+      ),
+      subtitle: Text(
+        '${s.href} · ${s.kind.label}',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: isDimmed ? TextStyle(color: theme.disabledColor.withValues(alpha: 0.7)) : null,
+      ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(
-            tooltip: s.inToc ? 'Quitar del índice' : 'Mostrar en el índice',
-            icon: Icon(s.inToc ? Icons.visibility_outlined : Icons.visibility_off_outlined, size: 18),
-            onPressed: onToggleToc,
-          ),
-          ReorderableDragStartListener(
-            index: index,
-            child: const Padding(padding: EdgeInsets.all(AppPadding.medium), child: Icon(Icons.drag_handle, size: 20)),
+          if (!s.inToc) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: theme.colorScheme.surfaceContainerHighest,
+              ),
+              child: Text(
+                'Omitida del índice',
+                style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.outline, fontSize: 10),
+              ),
+            ),
+            const SizedBox(width: 4),
+          ],
+          Tooltip(
+            message: s.inToc ? 'Incluida en el índice de contenidos' : 'Omitida del índice de contenidos',
+            child: Checkbox(
+              value: s.inToc,
+              onChanged: (_) => onToggleToc(),
+            ),
           ),
         ],
       ),
