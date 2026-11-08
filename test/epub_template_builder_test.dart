@@ -62,6 +62,23 @@ TemplateProject _project({BookMetadata Function(BookMetadata m)? metadata, List<
 }
 
 void main() {
+  test('TemplateProject.initial genera las 8 secciones canónicas de Novela Ligera', () {
+    final project = TemplateProject.initial();
+    expect(project.sections.length, 8);
+    expect(project.sections.map((s) => s.kind).toList(), [
+      SectionKind.cover,
+      SectionKind.illustrations,
+      SectionKind.titlePage,
+      SectionKind.prologue,
+      SectionKind.chapter,
+      SectionKind.chapter,
+      SectionKind.epilogue,
+      SectionKind.afterword,
+    ]);
+    expect(project.sections[4].fileName, 'capitulo01');
+    expect(project.sections[5].fileName, 'capitulo02');
+  });
+
   test('uuidV7 tiene versión 7, variante RFC y empieza por la marca de tiempo', () {
     final at = DateTime.utc(2026, 10, 3);
     final id = uuidV7(at);

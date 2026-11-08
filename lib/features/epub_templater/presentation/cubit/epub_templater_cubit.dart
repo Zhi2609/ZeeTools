@@ -36,10 +36,13 @@ class EpubTemplaterCubit extends Cubit<EpubTemplaterState> {
       ) {
     var profiles = _profilesRepo.getProfiles();
     var draft = _profilesRepo.getDraft();
-    // La primera ejecución arranca con un perfil que muestra todos los tipos de sección.
+    // La primera ejecución arranca con el perfil de Novela ligera y Todas las secciones disponible.
     if (draft == null && profiles.isEmpty) {
-      draft = TemplateProject.allSections();
-      profiles = {allSectionsProfile: draft};
+      draft = TemplateProject.initial();
+      profiles = {
+        'Novela ligera': draft,
+        allSectionsProfile: TemplateProject.allSections(),
+      };
       _profilesRepo.saveProfiles(profiles);
     }
     draft ??= TemplateProject.initial();

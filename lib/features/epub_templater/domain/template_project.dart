@@ -28,29 +28,14 @@ abstract class TemplateProject with _$TemplateProject {
       EmbeddedFont(family: 'Times New Roman', headingLevels: [1]),
     ],
     sections: [
-      for (final kind in const [
-        SectionKind.cover,
-        SectionKind.synopsis,
-        SectionKind.illustrations,
-        SectionKind.authorProfile,
-        SectionKind.titlePage,
-        SectionKind.colophon,
-        SectionKind.contentsImage,
-        SectionKind.epigraph,
-        SectionKind.preface,
-        SectionKind.prologue,
-      ])
-        TemplateSection.of(kind),
+      TemplateSection.of(SectionKind.cover),
+      TemplateSection.of(SectionKind.illustrations),
+      TemplateSection.of(SectionKind.titlePage),
+      TemplateSection.of(SectionKind.prologue),
       TemplateSection.of(SectionKind.chapter),
       TemplateSection.of(SectionKind.chapter, number: 2),
-      for (final kind in const [
-        SectionKind.epilogue,
-        SectionKind.afterword,
-        SectionKind.translatorNotes,
-        SectionKind.backCover,
-        SectionKind.endnotes,
-      ])
-        TemplateSection.of(kind),
+      TemplateSection.of(SectionKind.epilogue),
+      TemplateSection.of(SectionKind.afterword),
     ],
   );
 
