@@ -15,7 +15,18 @@ const _bottomPadding = 96.0;
 // Secciones de un formulario con un ancho de lectura cómodo. Con [showIndex] y espacio suficiente,
 // un índice lateral lleva a cada sección y marca la que se está viendo; para poder saltar a
 // cualquiera, todas se construyen a la vez en lugar de a medida que aparecen.
-class const FormPage({super.key, required final List<FormSection> sections, final bool showIndex = false}) extends StatefulWidget {
+class FormPage extends StatefulWidget {
+  const FormPage({
+    super.key,
+    required this.sections,
+    this.header,
+    this.showIndex = false,
+  });
+
+  final List<FormSection> sections;
+  final Widget? header;
+  final bool showIndex;
+
   @override
   State<FormPage> createState() => _FormPageState();
 }
@@ -97,6 +108,7 @@ class _FormPageState extends State<FormPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (widget.header case final header?) header,
               for (final (i, section) in widget.sections.indexed) KeyedSubtree(key: _keys[i], child: section),
             ],
           ),

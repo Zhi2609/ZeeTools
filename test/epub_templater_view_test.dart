@@ -122,6 +122,23 @@ void main() {
     expect(find.text('Interludio 1: Entre capítulos'), findsWidgets);
   });
 
+  testWidgets('SectionEditor contiene tarjetas modulares y opciones avanzadas colapsable', (tester) async {
+    await pumpView(tester);
+    expect(find.text('Qué es esta sección'), findsOneWidget);
+    expect(find.text('Cómo se ve en la página'), findsOneWidget);
+    expect(find.text('Aparece en el índice'), findsOneWidget);
+    expect(find.text('Opciones avanzadas'), findsOneWidget);
+
+    expect(find.widgetWithText(TextFormField, 'Etiqueta ARIA'), findsNothing);
+
+    await tester.ensureVisible(find.text('Opciones avanzadas'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Opciones avanzadas'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.widgetWithText(TextFormField, 'Etiqueta ARIA'));
+    expect(find.widgetWithText(TextFormField, 'Etiqueta ARIA'), findsOneWidget);
+  });
+
   testWidgets('metadatos y perfiles: guardar, modificar y volver a cargar', (tester) async {
     await pumpView(tester);
     await tester.tap(find.text('Metadatos'));
