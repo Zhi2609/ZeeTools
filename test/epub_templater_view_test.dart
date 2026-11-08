@@ -351,7 +351,7 @@ void main() {
     expect(cubit.state.project.fonts, hasLength(2));
   });
 
-  testWidgets('el nombre para ordenar se habilita con el nombre y se deduce mientras no se edite', (tester) async {
+  testWidgets('el nombre para ordenar se deduce automáticamente y permite restablecer con botón sync', (tester) async {
     await pumpView(tester, size: const Size(1280, 3000));
     await tester.tap(find.text('Metadatos'));
     await tester.pumpAndSettle();
@@ -361,11 +361,18 @@ void main() {
     await tester.enterText(find.widgetWithText(TextFormField, 'Nombre en romaji').first, 'Nanasawa Matari');
     await tester.pumpAndSettle();
     expect(cubit.state.project.metadata.actors.first.fileAs, 'Matari, Nanasawa');
+    expect(find.byTooltip('Generado automáticamente a partir del nombre'), findsWidgets);
 
+    // Editamos manualmente el nombre para ordenar
     await tester.enterText(find.widgetWithText(TextField, 'Nombre para ordenar').first, 'Nanasawa');
-    await tester.enterText(find.widgetWithText(TextFormField, 'Nombre en romaji').first, 'Nanasawa Matari Sensei');
     await tester.pumpAndSettle();
     expect(cubit.state.project.metadata.actors.first.fileAs, 'Nanasawa');
+    expect(find.byTooltip('Restablecer orden automático a "Matari, Nanasawa"'), findsOneWidget);
+
+    // Pulsamos el botón de restablecer orden automático
+    await tester.tap(find.byTooltip('Restablecer orden automático a "Matari, Nanasawa"'));
+    await tester.pumpAndSettle();
+    expect(cubit.state.project.metadata.actors.first.fileAs, 'Matari, Nanasawa');
   });
 
   testWidgets('el nombre original solo se pide a quien tiene un nombre en escritura propia', (tester) async {

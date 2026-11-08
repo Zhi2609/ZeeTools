@@ -764,12 +764,30 @@ class _ActorEditorState extends State<_ActorEditor> {
                         // El orden se deduce del nombre mientras nadie lo haya editado a mano.
                         onChanged: (name) => widget.onChanged(actor.copyWith(name: name, fileAs: actor.fileAs.isEmpty || actor.fileAs == fileAsFor(actor.name) ? fileAsFor(name) : actor.fileAs)),
                       ),
-                      AppTextField(
-                        label: 'Nombre para ordenar',
-                        value: actor.fileAs,
-                        hint: 'Apellido, Nombre',
-                        enabled: actor.name.trim().isNotEmpty,
-                        onChanged: (v) => widget.onChanged(actor.copyWith(fileAs: v)),
+                      Builder(
+                        builder: (context) {
+                          final autoFileAs = fileAsFor(actor.name);
+                          final isAuto = actor.fileAs.trim().isEmpty || actor.fileAs == autoFileAs;
+                          return AppTextField(
+                            label: 'Nombre para ordenar',
+                            value: actor.fileAs,
+                            hint: 'Apellido, Nombre',
+                            enabled: actor.name.trim().isNotEmpty,
+                            suffix: actor.name.trim().isEmpty
+                                ? null
+                                : isAuto
+                                    ? const Tooltip(
+                                        message: 'Generado automáticamente a partir del nombre',
+                                        child: Icon(Icons.auto_mode, size: 18),
+                                      )
+                                    : IconButton(
+                                        tooltip: 'Restablecer orden automático a "$autoFileAs"',
+                                        icon: const Icon(Icons.sync, size: 18),
+                                        onPressed: () => widget.onChanged(actor.copyWith(fileAs: autoFileAs)),
+                                      ),
+                            onChanged: (v) => widget.onChanged(actor.copyWith(fileAs: v)),
+                          );
+                        },
                       ),
                       if (_script case final script?)
                         AppTextField(
