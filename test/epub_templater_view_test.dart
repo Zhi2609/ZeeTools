@@ -79,9 +79,15 @@ void main() {
   }
 
   test('la primera ejecución guarda y carga el perfil con todos los tipos de sección', () {
-    expect(profiles.getProfiles().keys, [EpubTemplaterCubit.allSectionsProfile]);
-    expect({for (final s in cubit.state.project.sections) s.kind}, SectionKind.values.toSet());
+    expect(profiles.getProfiles().keys, ['Novela ligera', EpubTemplaterCubit.allSectionsProfile]);
+    expect({for (final s in cubit.state.project.sections) s.kind}, TemplateProject.initial().sections.map((s) => s.kind).toSet());
     expect(cubit.state.project.guideComments, isFalse);
+  });
+
+  testWidgets('ProfileBar muestra botones con texto y botón Generar EPUB', (tester) async {
+    await pumpView(tester);
+    expect(find.widgetWithText(OutlinedButton, 'Guardar perfil'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Generar EPUB'), findsOneWidget);
   });
 
   testWidgets('secciones: lista inicial, añadir y editar la seleccionada', (tester) async {
@@ -138,7 +144,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Eliminar'));
     await tester.pumpAndSettle();
-    expect(profiles.getProfiles().keys, [EpubTemplaterCubit.allSectionsProfile]);
+    expect(profiles.getProfiles().keys, ['Novela ligera', EpubTemplaterCubit.allSectionsProfile]);
   });
 
   testWidgets('el campo de perfil vacío despliega todos los perfiles al enfocarlo', (tester) async {

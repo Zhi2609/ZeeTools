@@ -14,7 +14,11 @@ import '/inject_dependencies.dart';
 import '../../cubit/epub_templater_cubit.dart';
 
 // El nombre en edición es estado local: teclearlo solo reconstruye esta barra.
-class const ProfileBar({super.key}) extends StatefulWidget {
+class ProfileBar extends StatefulWidget {
+  const ProfileBar({super.key, this.onGenerate});
+
+  final VoidCallback? onGenerate;
+
   @override
   State<ProfileBar> createState() => _ProfileBarState();
 }
@@ -111,6 +115,22 @@ class _ProfileBarState extends State<ProfileBar> {
               },
             ),
           ),
+          Tooltip(
+            message: 'Cargar perfil',
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.download_outlined, size: 18),
+              label: const Text('Cargar perfil'),
+              onPressed: exists ? () => cubit.loadProfile(_name) : null,
+            ),
+          ),
+          Tooltip(
+            message: exists ? 'Sobrescribir perfil' : 'Guardar perfil',
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.save_outlined, size: 18),
+              label: Text(exists ? 'Sobrescribir' : 'Guardar perfil'),
+              onPressed: _name.trim().isEmpty ? null : () => cubit.saveProfile(_name),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.restart_alt),
             tooltip: 'Restablecer todo',
@@ -138,17 +158,7 @@ class _ProfileBarState extends State<ProfileBar> {
             onPressed: _import,
           ),
           IconButton(
-            icon: const Icon(Icons.save_outlined),
-            tooltip: exists ? 'Sobrescribir perfil' : 'Guardar perfil',
-            onPressed: _name.trim().isEmpty ? null : () => cubit.saveProfile(_name),
-          ),
-          IconButton(
-            icon: const Icon(Icons.download_outlined),
-            tooltip: 'Cargar perfil',
-            onPressed: exists ? () => cubit.loadProfile(_name) : null,
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
+            icon: Icon(Icons.delete_outline, color: exists ? Theme.of(context).colorScheme.error : null),
             tooltip: 'Eliminar perfil',
             onPressed: exists
                 ? () async {
@@ -157,6 +167,14 @@ class _ProfileBarState extends State<ProfileBar> {
                   }
                 : null,
           ),
+          if (widget.onGenerate != null) ...[
+            const SizedBox(width: AppSpacing.small),
+            FilledButton.icon(
+              icon: const Icon(Icons.save_alt, size: 18),
+              label: const Text('Generar EPUB'),
+              onPressed: widget.onGenerate,
+            ),
+          ],
         ],
       ),
     );

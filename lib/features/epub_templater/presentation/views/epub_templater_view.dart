@@ -33,28 +33,6 @@ class const _EpubTemplaterContent() extends StatefulWidget {
 }
 
 class _EpubTemplaterContentState extends State<_EpubTemplaterContent> {
-  final _fabNotifier = getIt<ValueNotifier<List<SpeedDialAction>>>();
-
-  @override
-  void initState() {
-    super.initState();
-    // El shell construye el FAB a partir del notificador; se publica tras el primer frame.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fabNotifier.value = [
-        SpeedDialAction(icon: Icons.save_alt, label: 'Generar EPUB…', onPressed: _generate),
-      ];
-    });
-  }
-
-  @override
-  void dispose() {
-    // Diferir la limpieza al siguiente frame — el árbol está bloqueado durante dispose.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fabNotifier.value = [];
-    });
-    super.dispose();
-  }
-
   Future<void> _generate() async {
     final cubit = context.read<EpubTemplaterCubit>();
     final errors = templateIssues(cubit.state.project).where((i) => i.level == IssueLevel.error).toList();
@@ -120,7 +98,7 @@ class _EpubTemplaterContentState extends State<_EpubTemplaterContent> {
           ),
           body: Column(
             children: [
-              const ProfileBar(),
+              ProfileBar(onGenerate: _generate),
               const _IssuesBanner(),
               if (context.select((EpubTemplaterCubit c) => c.state.generating)) const LinearProgressIndicator(),
               const Divider(height: 1),
