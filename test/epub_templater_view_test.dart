@@ -461,21 +461,32 @@ void main() {
     expect(cubit.state.project.metadata.date, '2013-11-22T00:00:00Z');
   });
 
-  testWidgets('el equivalente obligatorio del título es el del idioma del libro', (tester) async {
+  testWidgets('divulgación progresiva: solo muestra idiomas requeridos o con texto y permite añadir opcionales', (tester) async {
     cubit.updateMetadata((m) => m.copyWith(title: 'Wandering Witch', language: 'ja'));
     await pumpView(tester, size: const Size(1280, 3000));
     await tester.tap(find.text('Metadatos'));
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(TextFormField, 'Título en japonés'), findsOneWidget);
-    expect(find.widgetWithText(TextFormField, 'Título en romaji'), findsOneWidget);
-    expect(find.widgetWithText(TextFormField, 'Título en español'), findsOneWidget);
-    expect(find.descendant(of: find.widgetWithText(TextFormField, 'Título en japonés'), matching: find.text('Obligatorio')), findsOneWidget);
-    expect(find.text('Japonés'), findsWidgets);
 
-    // En un libro en inglés el japonés sigue como idioma original, pero ya no es obligatorio.
+    // El campo obligatorio (japonés) siempre es visible y marcado como obligatorio si está vacío
+    expect(find.widgetWithText(TextFormField, 'Título en japonés'), findsOneWidget);
+    expect(find.descendant(of: find.widgetWithText(TextFormField, 'Título en japonés'), matching: find.text('Obligatorio')), findsOneWidget);
+
+    // Los campos opcionales sin contenido (español) están ocultos por defecto
+    expect(find.widgetWithText(TextFormField, 'Título en español'), findsNothing);
+    expect(find.text('+ Añadir título en otro idioma'), findsOneWidget);
+
+    // Al pulsar añadir otro idioma, se despliega el menú y permite agregarlo
+    await tester.tap(find.text('+ Añadir título en otro idioma'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(MenuItemButton, 'Español'));
+    await tester.pumpAndSettle();
+
+    // Ahora el campo de español es visible
+    expect(find.widgetWithText(TextFormField, 'Título en español'), findsOneWidget);
+
+    // En un libro en inglés el japonés ya no es obligatorio
     cubit.updateMetadata((m) => m.copyWith(language: 'en'));
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(TextFormField, 'Título en japonés'), findsOneWidget);
     expect(find.descendant(of: find.widgetWithText(TextFormField, 'Título en japonés'), matching: find.text('Obligatorio')), findsNothing);
   });
 

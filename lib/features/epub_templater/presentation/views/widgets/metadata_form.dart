@@ -477,42 +477,145 @@ class const MetadataForm({
   }
 }
 
-// Equivalentes de un título o serie: el del idioma del libro (obligatorio), el español y el
-// inglés cuando no son el principal y, si la obra se escribió en japonés, coreano o chino, el
-// romanizado y el de su escritura.
-class const _Alternates({
-  required final List<LocalizedText> items,
-  // Idioma del principal.
-  required final String main,
-  // Idioma del libro cuando no es el del principal.
-  required final String? requiredLang,
-  required final OriginalLanguage? original,
-  required final String noun,
-  required final ValueChanged<List<LocalizedText>> onChanged,
-  final String? hint,
-  // Del equivalente obligatorio.
-  final String? error,
-}) extends StatelessWidget {
-  Widget _field(String label, String lang, {String? error}) => AppTextField(
-    key: ValueKey('$noun-$lang'),
-    label: '$noun $label',
-    value: localizedText(items, lang),
-    hint: hint,
+// Equivalentes de un título o serie con divulgación progresiva: se muestran el obligatorio
+// y los que tengan texto. Los idiomas opcionales adicionales se añaden mediante un menú.
+class _Alternates extends StatefulWidget {
+  const _Alternates({
+    required this.items,
+    required this.main,
+    required this.requiredLang,
+    required this.original,
+    required this.noun,
+    required this.onChanged,
+    this.hint,
+    this.error,
+  });
+
+  final List<LocalizedText> items;
+  final String main;
+  final String? requiredLang;
+  final OriginalLanguage? original;
+  final String noun;
+  final ValueChanged<List<LocalizedText>> onChanged;
+  final String? hint;
+  final String? error;
+
+  @override
+  State<_Alternates> createState() => _AlternatesState();
+}
+
+class _AlternatesState extends State<_Alternates> {
+  final Set<String> _extraLangs = {};
+
+  Widget _field(String labelSuffix, String lang, {String? error, bool canRemove = false}) => AppTextField(
+    key: ValueKey('${widget.noun}-$lang'),
+    label: '${widget.noun} $labelSuffix',
+    value: localizedText(widget.items, lang),
+    hint: widget.hint,
     error: error,
-    onChanged: (v) => onChanged(withLocalizedText(items, lang, v)),
+    suffix: canRemove
+        ? IconButton(
+            tooltip: 'Quitar',
+            icon: const Icon(Icons.close, size: 18),
+            onPressed: () {
+              setState(() => _extraLangs.remove(lang));
+              final i = widget.items.indexWhere((t) => t.lang.toLowerCase() == lang.toLowerCase());
+              if (i >= 0) {
+                widget.onChanged([...widget.items]..removeAt(i));
+              } else {
+                widget.onChanged(withLocalizedText(widget.items, lang, ''));
+              }
+            },
+          )
+        : null,
+    onChanged: (v) => widget.onChanged(withLocalizedText(widget.items, lang, v)),
   );
 
   @override
   Widget build(BuildContext context) {
-    return FieldGrid(
+    final requiredLang = widget.requiredLang;
+    final original = widget.original;
+    final main = widget.main;
+
+    final activeEntries = <Widget>[];
+    final visibleLangs = <String>{};
+
+    // 1. Idioma obligatorio según configuración del libro
+    if (requiredLang != null) {
+      visibleLangs.add(requiredLang.toLowerCase());
+      activeEntries.add(_field('en ${languageName(requiredLang)}', requiredLang, error: widget.error));
+    }
+
+    // 2. Idioma original si la obra tiene escritura propia (japonés, coreano, chino)
+    if (original != null && original.scripted) {
+      if (!visibleLangs.contains(original.romanized.toLowerCase())) {
+        visibleLangs.add(original.romanized.toLowerCase());
+        activeEntries.add(_field('en ${original.romanization}', original.romanized));
+      }
+      if (original.name.toLowerCase() != requiredLang?.toLowerCase() && !visibleLangs.contains(original.name.toLowerCase())) {
+        visibleLangs.add(original.name.toLowerCase());
+        activeEntries.add(_field('en ${original.label.toLowerCase()}', original.name));
+      }
+    }
+
+    // 3. Idiomas que ya tienen contenido guardado
+    for (final item in widget.items) {
+      final key = item.lang.toLowerCase();
+      if (item.text.trim().isNotEmpty && key != main.toLowerCase() && !visibleLangs.contains(key)) {
+        visibleLangs.add(key);
+        activeEntries.add(_field('en ${languageName(item.lang)}', item.lang, canRemove: true));
+      }
+    }
+
+    // 4. Idiomas opcionales agregados explícitamente en la sesión
+    for (final extra in _extraLangs) {
+      final key = extra.toLowerCase();
+      if (!visibleLangs.contains(key) && key != main.toLowerCase()) {
+        visibleLangs.add(key);
+        activeEntries.add(_field('en ${languageName(extra)}', extra, canRemove: true));
+      }
+    }
+
+    // Opciones disponibles para agregar
+    final available = <MapEntry<String, String>>[];
+    for (final MapEntry(key: code, value: name) in bookLanguages.entries) {
+      if (code.toLowerCase() != main.toLowerCase() && !visibleLangs.contains(code.toLowerCase())) {
+        available.add(MapEntry(code, name));
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: AppSpacing.medium,
       children: [
-        if (requiredLang case final lang?) _field('en ${languageName(lang)}', lang, error: error),
-        for (final lang in const [spanishLanguage, mainTitleLanguage])
-          if (lang != main && lang != requiredLang) _field('en ${languageName(lang)}', lang),
-        if (original case final o? when o.scripted) ...[
-          _field('en ${o.romanization}', o.romanized),
-          if (o.name != requiredLang) _field('en ${o.label.toLowerCase()}', o.name),
-        ],
+        if (activeEntries.isNotEmpty)
+          FieldGrid(
+            children: activeEntries,
+          ),
+        if (available.isNotEmpty)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: MenuAnchor(
+              builder: (context, controller, child) => OutlinedButton.icon(
+                icon: const Icon(Icons.add, size: 18),
+                label: Text('+ Añadir ${widget.noun.toLowerCase()} en otro idioma'),
+                onPressed: () {
+                  if (controller.isOpen) {
+                    controller.close();
+                  } else {
+                    controller.open();
+                  }
+                },
+              ),
+              menuChildren: [
+                for (final entry in available)
+                  MenuItemButton(
+                    onPressed: () => setState(() => _extraLangs.add(entry.key)),
+                    child: Text(entry.value),
+                  ),
+              ],
+            ),
+          ),
       ],
     );
   }
