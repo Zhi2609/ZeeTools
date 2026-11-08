@@ -22,43 +22,98 @@ import '../../../domain/section_kind.dart';
 import '../../../domain/template_section.dart';
 import '../../cubit/epub_templater_cubit.dart';
 
-class const ImagesForm({super.key}) extends StatelessWidget {
+enum _ImageFilter {
+  all('Todas'),
+  illustrations('Ilustraciones'),
+  headings('Encabezados');
+
+  const _ImageFilter(this.label);
+  final String label;
+}
+
+class ImagesForm extends StatefulWidget {
+  const ImagesForm({super.key});
+
+  @override
+  State<ImagesForm> createState() => _ImagesFormState();
+}
+
+class _ImagesFormState extends State<ImagesForm> {
+  _ImageFilter _filter = _ImageFilter.all;
+
   @override
   Widget build(BuildContext context) {
+    final sections = context.select((EpubTemplaterCubit c) => c.state.project.sections);
     return FormPage(
       showIndex: true,
       sections: [
-        const FormSection(title: 'Optimización', icon: Icons.auto_fix_high, children: [_OptimizationOptions()]),
-        for (final s in context.select((EpubTemplaterCubit c) => c.state.project.sections))
-          if (s.kind.layout == SectionLayout.text && s.headingStyle.usesImage)
-            FormSection(
-              key: ValueKey(s.key),
-              title: '${s.effectiveTocLabel} · ${s.headingStyle.label}',
-              icon: Icons.title,
-              children: [_HeadingImage(section: s)],
-            )
-          else if (s.kind.acceptsImages)
-            FormSection(
-              key: ValueKey(s.key),
-              title: s.effectiveTocLabel,
-              icon: s.kind.singleImage ? Icons.image_outlined : Icons.photo_library_outlined,
-              children: [_SectionImages(section: s)],
+        FormSection(
+          title: 'Optimización',
+          icon: Icons.auto_fix_high,
+          children: [
+            _OptimizationOptions(
+              filter: _filter,
+              onFilterChanged: (f) => setState(() => _filter = f),
             ),
+          ],
+        ),
+        for (final s in sections)
+          if (s.kind.layout == SectionLayout.text && s.headingStyle.usesImage) ...[
+            if (_filter == _ImageFilter.all || _filter == _ImageFilter.headings)
+              FormSection(
+                key: ValueKey(s.key),
+                title: '${s.effectiveTocLabel} · ${s.headingStyle.label}',
+                icon: Icons.title,
+                children: [_HeadingImage(section: s)],
+              ),
+          ] else if (s.kind.acceptsImages) ...[
+            if (_filter == _ImageFilter.all || _filter == _ImageFilter.illustrations)
+              FormSection(
+                key: ValueKey(s.key),
+                title: s.effectiveTocLabel,
+                icon: s.kind.singleImage ? Icons.image_outlined : Icons.photo_library_outlined,
+                children: [_SectionImages(section: s)],
+              ),
+          ],
       ],
     );
   }
 }
 
-class const _OptimizationOptions() extends StatelessWidget {
+class _OptimizationOptions extends StatelessWidget {
+  const _OptimizationOptions({
+    required this.filter,
+    required this.onFilterChanged,
+  });
+
+  final _ImageFilter filter;
+  final ValueChanged<_ImageFilter> onFilterChanged;
+
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<EpubTemplaterCubit>();
     final state = context.watch<EpubTemplaterCubit>().state;
     final pending = state.imagePaths.where((path) => state.imageJobs[path] == null).length;
+    final textTheme = Theme.of(context).textTheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: AppSpacing.medium + AppSpacing.small,
       children: [
+        FieldGroup(
+          label: 'Filtrar secciones',
+          child: Wrap(
+            spacing: AppSpacing.small,
+            children: [
+              for (final f in _ImageFilter.values)
+                FilterChip(
+                  label: Text(f.label),
+                  selected: filter == f,
+                  onSelected: (_) => onFilterChanged(f),
+                ),
+            ],
+          ),
+        ),
         FieldGroup(
           label: 'Formatos permitidos',
           child: SelectionPillGroup(
@@ -72,11 +127,24 @@ class const _OptimizationOptions() extends StatelessWidget {
           columns: 2,
           minCellWidth: 320,
           children: [
-            SegmentedButton<QualityMode>(
-              showSelectedIcon: false,
-              segments: [for (final mode in QualityMode.values) ButtonSegment(value: mode, label: Text(mode.label))],
-              selected: {state.qualityMode},
-              onSelectionChanged: (v) => cubit.setQualityMode(v.first),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: AppSpacing.small,
+              children: [
+                SegmentedButton<QualityMode>(
+                  showSelectedIcon: false,
+                  segments: [for (final mode in QualityMode.values) ButtonSegment(value: mode, label: Text(mode.label))],
+                  selected: {state.qualityMode},
+                  onSelectionChanged: (v) => cubit.setQualityMode(v.first),
+                ),
+                Text(
+                  switch (state.qualityMode) {
+                    QualityMode.lossless => 'Sin pérdida: conserva la calidad idéntica del original (archivos más pesados).',
+                    QualityMode.visuallyLossless => 'Equilibrada: compresión recomendada para libros digitales sin artefactos perceptibles.',
+                  },
+                  style: textTheme.bodySmall,
+                ),
+              ],
             ),
             ToggleField(
               label: 'Permitir cambiar de formato',

@@ -497,6 +497,33 @@ void main() {
     expect(find.descendant(of: find.widgetWithText(TextFormField, 'Título en japonés'), matching: find.text('Obligatorio')), findsNothing);
   });
 
+  testWidgets('pestaña imágenes: permite filtrar secciones y muestra ayuda de modos de calidad', (tester) async {
+    await pumpView(tester, size: const Size(1280, 1000));
+    await tester.tap(find.text('Imágenes'));
+    await tester.pumpAndSettle();
+
+    // Comprueba que los chips de filtrado están presentes
+    expect(find.widgetWithText(FilterChip, 'Todas'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'Ilustraciones'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'Encabezados'), findsOneWidget);
+
+    // Comprueba la descripción del modo de calidad actual (por defecto Sin pérdida)
+    expect(find.textContaining('Sin pérdida: conserva la calidad idéntica del original'), findsOneWidget);
+
+    // Cambiar a Visualmente sin pérdida actualiza la descripción
+    await tester.tap(find.text('Visualmente sin pérdida'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Equilibrada: compresión recomendada para libros digitales'), findsOneWidget);
+
+    // Filtrar por ilustraciones solo muestra la cubierta e ilustraciones
+    await tester.tap(find.widgetWithText(FilterChip, 'Ilustraciones'));
+    await tester.pumpAndSettle();
+    final cover = cubit.state.project.sections.firstWhere((s) => s.kind == SectionKind.cover);
+    final illustrations = cubit.state.project.sections.firstWhere((s) => s.kind == SectionKind.illustrations);
+    expect(find.byKey(ValueKey(cover.key)), findsOneWidget);
+    expect(find.byKey(ValueKey(illustrations.key)), findsOneWidget);
+  });
+
   test('las imágenes se optimizan una vez y el resultado llega a la generación', () async {
     final cover = cubit.state.project.sections.first;
     cubit.updateSection(cover.key, (s) => s.copyWith(images: ['C:/img/portada.png']));
