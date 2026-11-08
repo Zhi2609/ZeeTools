@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:path/path.dart' as p;
 
@@ -59,6 +60,7 @@ class const FontsForm({super.key}) extends StatelessWidget {
         ),
         FormSection(
           title: 'CSS propio',
+          subtitle: 'La plantilla ya incluye y genera todo el CSS base del libro. Usa este espacio únicamente para añadir reglas adicionales o sobrescribir estilos existentes.',
           icon: Icons.code,
           children: [
             AppTextField(
@@ -99,7 +101,17 @@ class const _FontCard({super.key, required final EmbeddedFont font, required fin
                 IconButton(tooltip: 'Quitar', icon: const Icon(Icons.close, size: 18), onPressed: onRemove),
               ],
             ),
-            Text('Título de ejemplo — Capítulo 1', style: TextStyle(fontFamily: font.family, fontSize: 22)),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: AppSpacing.small,
+              children: [
+                Text('Título de ejemplo — Capítulo 1', style: TextStyle(fontFamily: font.family, fontSize: 22)),
+                Text(
+                  'En un rincón apartado de la biblioteca, las páginas del tomo antiguo susurraban historias jamás contadas a la luz tenue de los candiles.',
+                  style: TextStyle(fontFamily: font.family, fontSize: 14),
+                ),
+              ],
+            ),
             FieldGrid(
               children: [
                 OutlinedButton.icon(
@@ -138,23 +150,46 @@ class const _FontCard({super.key, required final EmbeddedFont font, required fin
             FieldGroup(
               label: 'Niveles de título',
               child: SelectionPillGroup(
-                options: [for (var level = 1; level <= 9; level++) level],
+                options: const [1, 2, 3, 4, 5, 6],
                 selected: font.headingLevels.contains,
-                label: (level) => 'h$level',
+                label: (level) => switch (level) {
+                  1 => 'h1 · Capítulos',
+                  2 => 'h2 · Subtítulos',
+                  3 => 'h3 · Encabezados menores',
+                  _ => 'h$level',
+                },
                 onTap: (level) => onChanged(font.copyWith(headingLevels: font.headingLevels.toggled(level))),
               ),
             ),
-            SelectableText.rich(
-              TextSpan(
-                style: textTheme.bodySmall,
-                children: [
-                  const TextSpan(text: 'Clase: '),
+            Row(
+              children: [
+                SelectableText.rich(
                   TextSpan(
-                    text: '<p class="${font.cssClass}">',
-                    style: const TextStyle(fontFamily: 'monospace'),
+                    style: textTheme.bodySmall,
+                    children: [
+                      const TextSpan(text: 'Clase: '),
+                      TextSpan(
+                        text: '<p class="${font.cssClass}">',
+                        style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: AppSpacing.small),
+                IconButton(
+                  icon: const Icon(Icons.copy, size: 16),
+                  tooltip: 'Copiar clase CSS',
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: font.cssClass));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Clase .${font.cssClass} copiada al portapapeles'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
           ],
         ),

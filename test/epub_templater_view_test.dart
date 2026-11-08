@@ -334,15 +334,31 @@ void main() {
     );
   });
 
-  testWidgets('fuentes: la de ejemplo se aplica a h1 y se añaden niveles', (tester) async {
+  testWidgets('fuentes: niveles semánticos, muestra tipográfica completa y copia de clase', (tester) async {
     await pumpView(tester);
     await tester.tap(find.text('Fuentes y CSS'));
     await tester.pumpAndSettle();
     expect(find.text('Times New Roman'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(SelectionPill, 'h2'));
+    // Muestra de párrafo de lectura presente
+    expect(find.textContaining('En un rincón apartado de la biblioteca'), findsOneWidget);
+
+    // Niveles semánticos descriptivos
+    expect(find.widgetWithText(SelectionPill, 'h1 · Capítulos'), findsOneWidget);
+    expect(find.widgetWithText(SelectionPill, 'h2 · Subtítulos'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(SelectionPill, 'h2 · Subtítulos'));
     await tester.pumpAndSettle();
     expect(cubit.state.project.fonts.single.headingLevels, [1, 2]);
+
+    // Botón de copiar clase
+    expect(find.byTooltip('Copiar clase CSS'), findsOneWidget);
+    await tester.tap(find.byTooltip('Copiar clase CSS'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('copiada al portapapeles'), findsOneWidget);
+
+    // Aviso de CSS propio
+    expect(find.textContaining('La plantilla ya incluye y genera todo el CSS base'), findsOneWidget);
 
     await tester.tap(find.text('Añadir fuente'));
     await tester.pumpAndSettle();
