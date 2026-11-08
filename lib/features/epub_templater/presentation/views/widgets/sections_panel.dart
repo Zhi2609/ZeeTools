@@ -290,7 +290,7 @@ class _SectionTile extends StatelessWidget {
             const SizedBox(width: 4),
           ],
           Tooltip(
-            message: s.inToc ? 'Incluida en el índice de contenidos' : 'Omitida del índice de contenidos',
+            message: s.inToc ? 'Quitar del índice' : 'Mostrar en el índice',
             child: Checkbox(
               value: s.inToc,
               onChanged: (_) => onToggleToc(),

@@ -131,7 +131,7 @@ class _SectionForm extends StatelessWidget {
                   onChanged: (v) => update((s) => s.copyWith(title: v)),
                 ),
                 AppTextField(
-                  label: isTitlePage ? 'Subtítulo de la obra' : 'Subtítulo (opcional)',
+                  label: isTitlePage ? 'Subtítulo de la obra' : 'Subtítulo',
                   value: s.subtitle,
                   helper: 'Aparece debajo, en letra más pequeña.',
                   onChanged: (v) => update((s) => s.copyWith(subtitle: v)),

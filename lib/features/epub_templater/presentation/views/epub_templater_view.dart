@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '/common/theme/app_dimensions.dart';
 import '/common/widgets/resizable_split_panel.dart';
-import '/common/widgets/speed_dial.dart';
 import '/inject_dependencies.dart';
 import '../../data/epub_template_builder.dart';
 import '../../domain/book_metadata.dart';

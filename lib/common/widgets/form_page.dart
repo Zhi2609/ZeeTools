@@ -108,7 +108,7 @@ class _FormPageState extends State<FormPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (widget.header case final header?) header,
+              ?widget.header,
               for (final (i, section) in widget.sections.indexed) KeyedSubtree(key: _keys[i], child: section),
             ],
           ),

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -62,120 +63,141 @@ class _ProfileBarState extends State<ProfileBar> {
     result.fold((error) => cubit.notify(error, isError: true), (metadata) => cubit.importMetadata(metadata, p.basename(path)));
   }
 
+  Widget _buildProfileInput(BuildContext context, Map<String, dynamic> profiles, double maxWidth) {
+    final query = _name.trim().toLowerCase();
+    final matches = profiles.keys.where((k) => k.toLowerCase().contains(query)).toList();
+    return MenuAnchor(
+      controller: _menu,
+      childFocusNode: _focus,
+      style: MenuStyle(minimumSize: WidgetStatePropertyAll(Size(maxWidth, 0))),
+      menuChildren: [
+        for (final name in matches)
+          MenuItemButton(
+            onPressed: () {
+              _controller.text = name;
+              setState(() => _name = name);
+            },
+            child: Text(name),
+          ),
+        if (matches.isEmpty) const MenuItemButton(child: Text('Ningún perfil coincide')),
+      ],
+      builder: (context, _, _) => TextField(
+        controller: _controller,
+        focusNode: _focus,
+        onTap: () => _menu.isOpen ? null : _menu.open(),
+        onChanged: (v) {
+          setState(() => _name = v);
+          if (!_menu.isOpen) _menu.open();
+        },
+        decoration: InputDecoration(
+          labelText: 'Perfil de plantilla',
+          hintText: 'Escribe un nombre para guardar o elige uno existente',
+          prefixIcon: const Icon(Icons.bookmarks_outlined, size: 20),
+          suffixIcon: IconButton(
+            tooltip: 'Perfiles guardados',
+            icon: const Icon(Icons.arrow_drop_down),
+            onPressed: () => _menu.isOpen ? _menu.close() : _menu.open(),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<EpubTemplaterCubit>();
     final profiles = context.select((EpubTemplaterCubit c) => c.state.profiles);
     final exists = profiles.containsKey(_name.trim());
+
+    final buttons = <Widget>[
+      Tooltip(
+        message: 'Cargar perfil',
+        child: OutlinedButton.icon(
+          icon: const Icon(Icons.download_outlined, size: 18),
+          label: const Text('Cargar perfil'),
+          onPressed: exists ? () => cubit.loadProfile(_name) : null,
+        ),
+      ),
+      Tooltip(
+        message: exists ? 'Sobrescribir perfil' : 'Guardar perfil',
+        child: OutlinedButton.icon(
+          icon: const Icon(Icons.save_outlined, size: 18),
+          label: Text(exists ? 'Sobrescribir' : 'Guardar perfil'),
+          onPressed: _name.trim().isEmpty ? null : () => cubit.saveProfile(_name),
+        ),
+      ),
+      IconButton(
+        icon: const Icon(Icons.restart_alt),
+        tooltip: 'Restablecer todo',
+        onPressed: () async {
+          final confirmed = await confirmAction(
+            context,
+            title: 'Restablecer todo',
+            message: 'Las secciones, los metadatos y las fuentes vuelven a los iniciales; se pierde lo que no esté guardado en un perfil.',
+            confirmLabel: 'Restablecer',
+          );
+          if (confirmed) cubit.resetProject();
+        },
+      ),
+      IconButton(
+        icon: const Icon(Icons.folder_open_outlined),
+        tooltip: 'Abrir la carpeta de perfiles',
+        onPressed: () async {
+          await Directory(cubit.profilesDirectory).create(recursive: true);
+          await openExternal(cubit.profilesDirectory);
+        },
+      ),
+      IconButton(
+        icon: const Icon(Icons.upload_file_outlined),
+        tooltip: 'Importar metadatos de un EPUB',
+        onPressed: _import,
+      ),
+      IconButton(
+        icon: Icon(Icons.delete_outline, color: exists ? Theme.of(context).colorScheme.error : null),
+        tooltip: 'Eliminar perfil',
+        onPressed: exists
+            ? () async {
+                final confirmed = await confirmAction(context, title: 'Eliminar perfil', message: 'Se eliminará el perfil «${_name.trim()}».', confirmLabel: 'Eliminar');
+                if (confirmed) await cubit.deleteProfile(_name);
+              }
+            : null,
+      ),
+      if (widget.onGenerate != null)
+        FilledButton.icon(
+          icon: const Icon(Icons.save_alt, size: 18),
+          label: const Text('Generar EPUB'),
+          onPressed: widget.onGenerate,
+        ),
+    ];
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppPadding.large, AppPadding.medium, AppPadding.medium, AppPadding.medium),
-      child: Row(
-        spacing: AppSpacing.small,
-        children: [
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final query = _name.trim().toLowerCase();
-                final matches = profiles.keys.where((k) => k.toLowerCase().contains(query)).toList();
-                return MenuAnchor(
-                  controller: _menu,
-                  childFocusNode: _focus,
-                  style: MenuStyle(minimumSize: WidgetStatePropertyAll(Size(constraints.maxWidth, 0))),
-                  menuChildren: [
-                    for (final name in matches)
-                      MenuItemButton(
-                        onPressed: () {
-                          _controller.text = name;
-                          setState(() => _name = name);
-                        },
-                        child: Text(name),
-                      ),
-                    if (matches.isEmpty) const MenuItemButton(child: Text('Ningún perfil coincide')),
-                  ],
-                  builder: (context, _, _) => TextField(
-                    controller: _controller,
-                    focusNode: _focus,
-                    onTap: () => _menu.isOpen ? null : _menu.open(),
-                    onChanged: (v) {
-                      setState(() => _name = v);
-                      if (!_menu.isOpen) _menu.open();
-                    },
-                    decoration: InputDecoration(
-                      labelText: 'Perfil de plantilla',
-                      hintText: 'Escribe un nombre para guardar o elige uno existente',
-                      prefixIcon: const Icon(Icons.bookmarks_outlined, size: 20),
-                      suffixIcon: IconButton(
-                        tooltip: 'Perfiles guardados',
-                        icon: const Icon(Icons.arrow_drop_down),
-                        onPressed: () => _menu.isOpen ? _menu.close() : _menu.open(),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          Tooltip(
-            message: 'Cargar perfil',
-            child: OutlinedButton.icon(
-              icon: const Icon(Icons.download_outlined, size: 18),
-              label: const Text('Cargar perfil'),
-              onPressed: exists ? () => cubit.loadProfile(_name) : null,
-            ),
-          ),
-          Tooltip(
-            message: exists ? 'Sobrescribir perfil' : 'Guardar perfil',
-            child: OutlinedButton.icon(
-              icon: const Icon(Icons.save_outlined, size: 18),
-              label: Text(exists ? 'Sobrescribir' : 'Guardar perfil'),
-              onPressed: _name.trim().isEmpty ? null : () => cubit.saveProfile(_name),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.restart_alt),
-            tooltip: 'Restablecer todo',
-            onPressed: () async {
-              final confirmed = await confirmAction(
-                context,
-                title: 'Restablecer todo',
-                message: 'Las secciones, los metadatos y las fuentes vuelven a los iniciales; se pierde lo que no esté guardado en un perfil.',
-                confirmLabel: 'Restablecer',
-              );
-              if (confirmed) cubit.resetProject();
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.folder_open_outlined),
-            tooltip: 'Abrir la carpeta de perfiles',
-            onPressed: () async {
-              await Directory(cubit.profilesDirectory).create(recursive: true);
-              await openExternal(cubit.profilesDirectory);
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.upload_file_outlined),
-            tooltip: 'Importar metadatos de un EPUB',
-            onPressed: _import,
-          ),
-          IconButton(
-            icon: Icon(Icons.delete_outline, color: exists ? Theme.of(context).colorScheme.error : null),
-            tooltip: 'Eliminar perfil',
-            onPressed: exists
-                ? () async {
-                    final confirmed = await confirmAction(context, title: 'Eliminar perfil', message: 'Se eliminará el perfil «${_name.trim()}».', confirmLabel: 'Eliminar');
-                    if (confirmed) await cubit.deleteProfile(_name);
-                  }
-                : null,
-          ),
-          if (widget.onGenerate != null) ...[
-            const SizedBox(width: AppSpacing.small),
-            FilledButton.icon(
-              icon: const Icon(Icons.save_alt, size: 18),
-              label: const Text('Generar EPUB'),
-              onPressed: widget.onGenerate,
-            ),
-          ],
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 950) {
+            return Wrap(
+              spacing: AppSpacing.small,
+              runSpacing: AppSpacing.small,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                SizedBox(
+                  width: min(constraints.maxWidth - 20, 280),
+                  child: _buildProfileInput(context, profiles, min(constraints.maxWidth - 20, 280)),
+                ),
+                ...buttons,
+              ],
+            );
+          }
+          return Row(
+            spacing: AppSpacing.small,
+            children: [
+              Expanded(
+                child: _buildProfileInput(context, profiles, constraints.maxWidth),
+              ),
+              ...buttons,
+            ],
+          );
+        },
       ),
     );
   }
