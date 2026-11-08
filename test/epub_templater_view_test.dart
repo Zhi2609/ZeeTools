@@ -139,6 +139,19 @@ void main() {
     expect(find.widgetWithText(TextFormField, 'Etiqueta ARIA'), findsOneWidget);
   });
 
+  testWidgets('la tarjeta de sección muestra ayuda editorial y abre la guía de secciones', (tester) async {
+    await pumpView(tester);
+    expect(find.text(SectionKind.cover.editorialHelp), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Guía de secciones del libro'));
+    await tester.pumpAndSettle();
+    expect(find.text('Guía de secciones del libro'), findsOneWidget);
+    expect(find.text('Preliminares'), findsWidgets);
+    await tester.tap(find.widgetWithText(TextButton, 'Cerrar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Guía de secciones del libro'), findsNothing);
+  });
+
   testWidgets('metadatos y perfiles: guardar, modificar y volver a cargar', (tester) async {
     await pumpView(tester);
     await tester.tap(find.text('Metadatos'));

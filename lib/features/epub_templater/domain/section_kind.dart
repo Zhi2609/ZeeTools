@@ -260,6 +260,32 @@ enum SectionKind {
   bool get acceptsImages => layout == SectionLayout.cover || layout == SectionLayout.images || layout == SectionLayout.colophon;
 
   bool get singleImage => layout == SectionLayout.cover;
+
+  String get editorialHelp => switch (this) {
+    cover => 'Imagen de portada del volumen que se muestra en bibliotecas digitales y al abrir el libro.',
+    notice => 'Aviso previo si la obra contiene violencia, gore, temas adultos o contenido sensible.',
+    synopsis => 'Resumen comercial o texto de contraportada para contextualizar la trama.',
+    illustrations => 'Páginas de ilustraciones a color del inicio, una por archivo.',
+    authorProfile => 'Semblanza o notas introductorias del autor(a) o del ilustrador(a).',
+    titlePage => 'Página formal de título y créditos de la edición.',
+    colophon => 'Logos y créditos de traducción, edición y colaboradores.',
+    contentsImage => 'Imagen del índice ilustrado original del volumen físico.',
+    dedication => 'Mensaje personal breve del autor dedicando la obra (ej. «Para mi familia»).',
+    epigraph => 'Cita literaria, frase célebre o poema que ambienta la temática antes de comenzar.',
+    preface => 'Introducción del autor explicando los orígenes o contexto de la creación del libro.',
+    prologue => 'Primer capítulo narrativo de la historia ambientado antes del capítulo 1.',
+    part => 'Separador que agrupa varios capítulos en un mismo arco o volumen.',
+    chapter => 'Capítulo regular de la narración.',
+    interlude => 'Capítulo corto de transición o punto de vista alternativo entre capítulos.',
+    epilogue => 'Capítulo final que cierra la narración tras el desenlace.',
+    afterword => 'Palabras de despedida y notas finales del autor tras concluir la historia.',
+    translatorNotes => 'Comentarios y notas aclaratorias del equipo de traducción o maquetación.',
+    acknowledgments => 'Agradecimientos a personas o entidades que colaboraron en el proyecto.',
+    appendix => 'Material complementario, glosario, mapas o fichas de personajes.',
+    backCover => 'Imagen de la contracubierta o contraportada trasera.',
+    endnotes => 'Lista de notas al pie y referencias agrupadas al final del libro.',
+    generic => 'Sección con contenido libre sin una función editorial específica.',
+  };
 }
 
 // Términos de semántica estructural de EPUB con sentido a nivel de sección y

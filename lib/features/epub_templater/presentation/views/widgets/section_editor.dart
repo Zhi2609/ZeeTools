@@ -13,6 +13,7 @@ import '../../../data/epub_template_builder.dart';
 import '../../../domain/section_kind.dart';
 import '../../../domain/template_section.dart';
 import '../../cubit/epub_templater_cubit.dart';
+import 'sections_guide_dialog.dart';
 
 class SectionEditor extends StatelessWidget {
   const SectionEditor({super.key});
@@ -93,12 +94,18 @@ class _SectionForm extends StatelessWidget {
           title: 'Qué es esta sección',
           subtitle: 'El tipo decide su lugar y su comportamiento en el libro.',
           icon: Icons.info_outline,
+          trailing: IconButton(
+            icon: const Icon(Icons.help_outline, size: 20),
+            tooltip: 'Guía de secciones del libro',
+            onPressed: () => SectionsGuideDialog.show(context),
+          ),
           children: [
             ResponsiveRow(
               children: [
                 OutlinedDropdown<SectionKind>(
                   label: 'Tipo',
                   value: s.kind,
+                  helper: s.kind.editorialHelp,
                   onChanged: (kind) {
                     if (kind != null && kind != s.kind) cubit.changeKind(s.key, kind);
                   },
